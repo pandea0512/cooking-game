@@ -41,7 +41,7 @@ function renderCooking(){
   $('slicingArea').classList.toggle('active',cookingStep===0);
   $('sliceStats').classList.toggle('hidden',cookingStep!==0);
   $('cookButton').disabled=(cookingStep===0 && cutPoints.length<3) || (cookingStep===1 && !isCooked());
-  if(cookingStep===1) renderHeat();
+  if(cookingStep===1) { renderPanPieces(); renderHeat(); }
   if(cookingStep===0) renderSlices();
   $('cookButton').textContent=state.button;
   for(let i=0;i<3;i++){
@@ -147,7 +147,7 @@ function endSlice(e){
   const threshold=dragStart.type==='mouse'?26:16;
   if(dy>=threshold){
     cutPoints.push(dragStart.x);
-    selectedPiece=null;minceCounts={};
+    selectedPiece=null;
     markIngredientChanged();
     renderSlices();
     $('worktopNote').textContent='좋아요! 칼 위치에 따라 조각 두께가 달라져요.';
@@ -192,7 +192,7 @@ $('backToSlicing').addEventListener('click',()=>{
 $('retryFrying').addEventListener('click',()=>{
   if(cookingStep!==1)return;
   resetHeat();renderHeat();
-  $('worktopNote').textContent='새 재료를 꺼냈어요. 주문은 그대로 유지됩니다.';
+  $('worktopNote').textContent='같은 손질 결과로 새 재료를 구워요. 주문은 그대로 유지됩니다.';
 });
 
 // v0.3 팬 조리: 재료를 양면으로 나눠 익힘도를 기록한다.
@@ -202,13 +202,44 @@ const heatNames=['꺼짐','약불','중불','강불'];
 function isCooked(){return sides.every(v=>v>=65 && v<=85);}
 function stopHeat(){heatLevel=0;if(heatTimer!==null){clearInterval(heatTimer);heatTimer=null;}}
 function resetHeat(){stopHeat();sides[0]=0;sides[1]=0;facing=0;}
+// 도마의 실제 손질 결과를 팬에 옮긴다. 다진 조각은 여러 작은 알갱이로 표현한다.
+function renderPanPieces(){
+  const pan=$('panMeat');
+  pan.replaceChildren();
+  const points=[0,...cutPoints,1];
+  const items=[];
+  for(let i=0;i<points.length-1;i++){
+    const width=points[i+1]-points[i];
+    const chops=minceCounts[i]||0;
+    // 다지기 횟수가 늘수록 더 많은 작은 조각으로 표현
+    const count=chops===0?1:Math.min(16,2+chops*3);
+    for(let j=0;j<count;j++)items.push({width:width/count, chopped:chops>0, i, j});
+  }
+  // 일정한 위치에 배치하여 굽기 중 조각이 튀거나 위치가 변하지 않도록 한다.
+  items.forEach((item,k)=>{
+    const el=document.createElement('span');
+    el.className='pan-piece'+(item.chopped?' pan-piece-minced':'');
+    const angle=k*2.399963229728653;
+    const radius=Math.sqrt((k+.5)/items.length)*38;
+    el.style.left=(50+Math.cos(angle)*radius)+'%';
+    el.style.top=(50+Math.sin(angle)*radius*.7)+'%';
+    el.style.width=(item.chopped?Math.max(5,Math.min(11,Math.sqrt(item.width)*19)):Math.max(10,Math.min(28,item.width*110)))+'px';
+    el.style.height=(item.chopped?'7px':'15px');
+    el.style.transform=`translate(-50%,-50%) rotate(${Math.round(angle*180/Math.PI)}deg)`;
+    pan.append(el);
+  });
+  pan.classList.toggle('has-mince',items.some(item=>item.chopped));
+}
 function renderHeat(){
   $('frontMeter').value=sides[0];$('backMeter').value=sides[1];
   $('frontValue').textContent=Math.round(sides[0])+'%';
   $('backValue').textContent=Math.round(sides[1])+'%';
   $('panMeatLabel').textContent=facing===0?'앞면':'뒷면';
   $('panMeat').style.setProperty('--sear',String(sides[facing]/100));
-  $('panMeat').style.background=`color-mix(in srgb, #b46c69 ${Math.max(0,100-sides[facing])}%, #65351f)`;
+  const t=sides[facing]/100;
+  const mix=(a,b)=>Math.round(a+(b-a)*t);
+  const cookedColor=`rgb(${mix(180,101)},${mix(108,53)},${mix(105,31)})`;
+  $('panMeat').querySelectorAll('.pan-piece').forEach(piece=>{piece.style.backgroundColor=cookedColor;});
   $('panArea').classList.toggle('heating',heatLevel>0);
   $('heatStatus').textContent=isCooked()?'양면 모두 적당히 익었어요! 불을 끄고 다음으로 넘어가세요.':
     sides.some(v=>v>85)?'너무 익었어요! 새 재료로 다시 굽기를 눌러 주세요.':
