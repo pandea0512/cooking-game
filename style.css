@@ -50,3 +50,9 @@
 .heat-controls small{color:#cbb198;line-height:1.5}
 @media(max-width:650px){.slice-stats{min-height:94px}.heat-meters{gap:8px}.heat-controls{padding:10px}.heat-buttons .mini-button{flex:1 1 auto}.cooking-header p{min-height:3.7em}}
 @media(max-height:530px) and (orientation:landscape){.slice-stats{min-height:52px}.worktop-note{min-height:1.5em}.cooking-header p{min-height:1.4em}.heat-controls{gap:5px;padding:6px 10px}.pan-area{height:95px}.burner{transform:scale(.75)}}
+
+/* v0.4: 조각 선택과 다지기 */
+.meat-piece.selected-piece{outline:3px solid #fff0bb;outline-offset:2px;z-index:2}
+.meat-piece.minced{background:repeating-linear-gradient(90deg,#b96d6a 0 6px,#e2a198 6px 8px,#a85d5c 8px 13px);background-size:calc(60px / var(--chops)) 100%;border-top:4px dashed #f4c7ac;border-bottom:4px dashed #f4c7ac}
+#minceSlice:disabled{opacity:.45;cursor:not-allowed}
+#backToSlicing{border-color:#c59c71;background:#59402f}
